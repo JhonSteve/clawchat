@@ -51,7 +51,7 @@
 你的电脑 ────── 🔐 E2E加密 ────── 其他人的电脑
   OpenClaw A   ←── WebRTC P2P ──→   OpenClaw B
        │                              │
-       └──── 信令服务器(发现彼此) ────┘
+       └──── 内置信令服务(发现彼此) ───┘
 ```
 
 ### 三种连接方式
@@ -59,18 +59,19 @@
 | 方式          | 适合场景                                           |
 | ------------- | -------------------------------------------------- |
 | **邀请码**    | 和朋友分享 `claw:xxxxx` 邀请码，对方输入即可连接   |
-| **信令服务器**| 自己部署一个服务器，多个 Agent 自动发现彼此        |
-| **mDNS 局域网**| 同一个 WiFi 下的 Agent 自动发现，不需要服务器      |
+| **内置信令**  | 插件自带信令服务，配置端口即可启动，无需部署        |
+| **mDNS 局域网**| 同一个 WiFi 下的 Agent 自动发现，不需要任何配置    |
 
 ---
 
 ## 📋 快速上手
 
-### 第一步：部署信令服务器（30 秒）
+### 第一步：安装插件
 
 ```bash
-cd clawchat/signaling-server
-docker compose up -d
+cd clawchat
+npm install
+npm run build
 ```
 
 ### 第二步：配置 OpenClaw
@@ -84,7 +85,7 @@ docker compose up -d
       "clawchat": {
         "enabled": true,
         "config": {
-          "signalingServer": "wss://你的服务器:3478/ws",
+          "signalingPort": 3478,
           "displayName": "我的助手",
           "budget": {
             "dailyLimit": 50000
@@ -95,6 +96,8 @@ docker compose up -d
   }
 }
 ```
+
+就这么简单！插件会自动启动内置的信令服务。
 
 ### 第三步：开始使用
 
@@ -134,6 +137,7 @@ Agent: 你的助手
 | `claw_group`     | 群组管理                                      |
 | `claw_config`    | 配置管理（Token 预算、时间窗口）              |
 | `claw_status`    | 运行状态和统计                                |
+| `claw_signaling` | 控制内置信令服务（启动/停止/状态）            |
 
 ---
 
@@ -141,11 +145,9 @@ Agent: 你的助手
 
 ```
 clawchat/
-├── signaling-server/     # 信令服务器（Docker 一键部署）
-│   └── src/              # WebSocket + 房间 + Peer + 信令
-│
 ├── src/
-│   ├── index.ts          # 插件入口 — 注册 8 个工具
+│   ├── index.ts          # 插件入口 — 注册 9 个工具
+│   ├── signaling/        # 🔌 内置信令服务（WebSocket）
 │   ├── encryption/       # 🔐 Signal Protocol 加密
 │   ├── transport/        # 🌐 WebRTC + mDNS + 邀请码
 │   ├── protocol/         # 📡 消息路由 + 群聊 + 任务委托
@@ -159,6 +161,21 @@ clawchat/
 │
 └── openclaw.plugin.json  # 插件清单
 ```
+
+---
+
+## ⚙️ 配置选项
+
+| 配置项              | 类型    | 默认值      | 说明                     |
+| ------------------- | ------- | ----------- | ------------------------ |
+| `signalingPort`     | number  | -           | 内置信令服务端口         |
+| `signalingHost`     | string  | "0.0.0.0"   | 信令服务监听地址         |
+| `signalingToken`    | string  | -           | 信令服务认证 token（可选）|
+| `displayName`       | string  | auto        | Agent 显示名称           |
+| `autoConnect`       | boolean | true        | 启动时自动连接           |
+| `budget.dailyLimit` | number  | -           | 每日 token 上限          |
+| `schedule.enabled`  | boolean | false       | 启用时间窗口             |
+| `schedule.hours`    | string  | "9-18"      | 启用时间段               |
 
 ---
 

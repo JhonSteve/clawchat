@@ -1,17 +1,34 @@
-// ClawChat Signaling Server — Room Management
+// ClawChat Signaling Service — Room Management
 import { randomBytes } from "node:crypto";
 import type { Room, RoomMetadata, RoomSummary, PeerInfo, Invitation } from "./types.ts";
 
 export class RoomManager {
   private rooms = new Map<string, Room>();
   private invitations = new Map<string, Invitation>();
+  private cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private roomTtlMs: number,
     private invitationTtlMs: number,
-  ) {
+  ) {}
+
+  // ─── Lifecycle ──────────────────────────────────────────────────
+
+  start(): void {
+    if (this.cleanupInterval) {
+      return; // Already started
+    }
     // Periodic cleanup of expired rooms and invitations
-    setInterval(() => this.cleanup(), 60_000);
+    this.cleanupInterval = setInterval(() => this.cleanup(), 60_000);
+  }
+
+  stop(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    this.rooms.clear();
+    this.invitations.clear();
   }
 
   // ─── Room Operations ────────────────────────────────────────────

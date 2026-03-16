@@ -7,33 +7,33 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsx watch src/index.ts",
-    "signaling": "tsx signaling-server/src/index.ts",
-    "signaling:docker": "docker compose up --build",
+    "signaling": "tsx src/signaling/service.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "oxlint .",
-    "format": "oxfmt --write ."
+    "format": "oxfmt --write .",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@privacyresearch/libsignal-protocol-typescript": "^0.0.15",
-    "node-datachannel": "^0.12.0",
-    "ws": "^8.18.0",
     "better-sqlite3": "^11.7.0",
-    "lancedb": "^0.18.0",
+    "lancedb": "0.0.1",
+    "node-datachannel": "^0.12.0",
     "uuid": "^11.1.0",
-    "zod": "^3.24.0"
+    "ws": "^8.19.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
-    "@types/node": "^22.0.0",
-    "@types/ws": "^8.5.14",
+    "@types/node": "^22.19.15",
     "@types/uuid": "^10.0.0",
-    "tsx": "^4.19.0",
-    "tsdown": "^0.12.0",
-    "vitest": "^3.1.0",
-    "oxlint": "^0.16.0",
+    "@types/ws": "^8.18.1",
     "oxfmt": "^0.6.0",
-    "typescript": "^5.7.0"
+    "oxlint": "^0.16.0",
+    "tsdown": "^0.12.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.1.0"
   },
   "engines": {
     "node": ">=22"

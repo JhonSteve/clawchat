@@ -23,6 +23,9 @@ export const ScheduleSchema = z.object({
 
 export const ClawChatConfigSchema = z.object({
   signalingServer: z.string().optional(),
+  signalingPort: z.number().int().positive().optional(),
+  signalingHost: z.string().optional(),
+  signalingToken: z.string().optional(),
   turnServer: z.string().optional(),
   displayName: z.string().optional(),
   autoConnect: z.boolean().default(true),

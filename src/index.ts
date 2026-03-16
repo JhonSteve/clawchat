@@ -2,8 +2,59 @@
 import type { Plugin } from "@opencode-ai/plugin";
 import { logger } from "./utils/logger.ts";
 import { loadConfig, ensureDataDir, type ClawChatConfig } from "./config.ts";
+import {
+  createSignalingService,
+  type SignalingService,
+  type SignalingServiceOptions,
+} from "./signaling/index.ts";
 
 let clawchatConfig: ClawChatConfig;
+let signalingService: SignalingService | null = null;
+
+// ─── Signaling Service Helpers ─────────────────────────────────────
+
+async function startEmbeddedSignalingService(): Promise<void> {
+  if (signalingService !== null) {
+    logger.info("signaling", "Signaling service already running");
+    return;
+  }
+
+  const options: SignalingServiceOptions = {
+    port: clawchatConfig.signalingPort ?? 3478,
+    host: clawchatConfig.signalingHost ?? "127.0.0.1",
+    authToken: clawchatConfig.signalingToken,
+    onLog: (category, message) => logger.info(category, message),
+  };
+
+  signalingService = createSignalingService(options);
+
+  try {
+    await signalingService.start();
+    const state = signalingService.getState();
+    logger.info(
+      "signaling",
+      `Embedded signaling service started on ws://${state.host}:${state.port}/ws`,
+    );
+  } catch (err) {
+    logger.error("signaling", `Failed to start signaling service: ${err}`);
+    signalingService = null;
+  }
+}
+
+async function stopEmbeddedSignalingService(): Promise<void> {
+  if (signalingService === null) {
+    logger.info("signaling", "Signaling service not running");
+    return;
+  }
+
+  await signalingService.stop();
+  signalingService = null;
+  logger.info("signaling", "Embedded signaling service stopped");
+}
+
+function getSignalingServiceState() {
+  return signalingService?.getState() ?? null;
+}
 
 export default function clawchatPlugin(api: Plugin) {
   // ─── Initialize ─────────────────────────────────────────────
@@ -11,8 +62,12 @@ export default function clawchatPlugin(api: Plugin) {
   clawchatConfig = loadConfig(api.config);
 
   logger.info("core", `ClawChat plugin initialized`);
-  logger.info("core", `Signaling server: ${clawchatConfig.signalingServer ?? "not configured"}`);
   logger.info("core", `Display name: ${clawchatConfig.displayName ?? "auto"}`);
+
+  // ─── Auto-start Signaling Service (if configured) ───────────
+  if (clawchatConfig.signalingServer === "embedded" || clawchatConfig.signalingPort) {
+    startEmbeddedSignalingService();
+  }
 
   // ─── Register Tools ─────────────────────────────────────────
 
@@ -260,17 +315,99 @@ export default function clawchatPlugin(api: Plugin) {
     },
     execute: async () => {
       // TODO: Phase 7 — Wire to Governor
+      const signalingState = getSignalingServiceState();
       return {
         content: JSON.stringify(
           {
             status: "initialized",
             config: clawchatConfig,
             uptime: process.uptime(),
+            signaling: signalingState,
           },
           null,
           2,
         ),
       };
+    },
+  });
+
+  // claw_signaling — Control embedded signaling service
+  api.registerTool({
+    name: "claw_signaling",
+    description: "管理内置信令服务：启动、停止、查看状态。信令服务用于 P2P 连接建立和房间管理。",
+    parameters: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: ["start", "stop", "status"],
+          description: "操作类型: start(启动), stop(停止), status(查看状态)",
+        },
+        port: {
+          type: "number",
+          description: "信令服务端口 (action=start 时可选，默认 3478)",
+        },
+        host: {
+          type: "string",
+          description: "信令服务绑定地址 (action=start 时可选，默认 127.0.0.1)",
+        },
+      },
+      required: ["action"],
+    },
+    execute: async (params) => {
+      switch (params.action) {
+        case "start": {
+          if (params.port) {
+            clawchatConfig.signalingPort = params.port;
+          }
+          if (params.host) {
+            clawchatConfig.signalingHost = params.host;
+          }
+          await startEmbeddedSignalingService();
+          const state = getSignalingServiceState();
+          return {
+            content: JSON.stringify(
+              {
+                success: state !== null,
+                message: state
+                  ? `Signaling service started on ws://${state.host}:${state.port}/ws`
+                  : "Failed to start signaling service",
+                state,
+              },
+              null,
+              2,
+            ),
+          };
+        }
+        case "stop": {
+          await stopEmbeddedSignalingService();
+          return {
+            content: JSON.stringify(
+              {
+                success: true,
+                message: "Signaling service stopped",
+              },
+              null,
+              2,
+            ),
+          };
+        }
+        case "status": {
+          const state = getSignalingServiceState();
+          return {
+            content: JSON.stringify(
+              {
+                running: state?.running ?? false,
+                state,
+              },
+              null,
+              2,
+            ),
+          };
+        }
+        default:
+          return { content: `Unknown action: ${params.action}` };
+      }
     },
   });
 
@@ -285,7 +422,7 @@ export default function clawchatPlugin(api: Plugin) {
   // ─── Register Hooks ─────────────────────────────────────────
   // TODO: Phase 8 — Register before_prompt_build hook to inject peer info
 
-  logger.info("core", "All tools registered (8 tools)");
+  logger.info("core", "All tools registered (9 tools)");
 }
 
 // Export types for external use
@@ -303,3 +440,19 @@ export type {
   QueryPayload,
   QueryResultPayload,
 } from "./protocol/types.ts";
+
+// Export signaling service
+export {
+  createSignalingService,
+  DEFAULT_SIGNALING_CONFIG,
+  RoomManager,
+  PeerManager,
+  SignalingHandler,
+} from "./signaling/index.ts";
+export type {
+  SignalingService,
+  SignalingServiceOptions,
+  SignalingServiceState,
+  SignalingMessage,
+  SignalingResponse,
+} from "./signaling/index.ts";

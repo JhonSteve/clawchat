@@ -1,10 +1,10 @@
-// ClawChat Signaling Server — Type Definitions
+// ClawChat Signaling Service — Type Definitions
 import type { WebSocket } from "ws";
 
 // ─── Peer Connection ────────────────────────────────────────────────
 
 export interface PeerInfo {
-  id: string;                    // Agent ID (fingerprint of identity key)
+  id: string; // Agent ID (fingerprint of identity key)
   socket: WebSocket;
   roomId: string | null;
   connectedAt: number;
@@ -15,9 +15,9 @@ export interface PeerInfo {
 export interface PeerMetadata {
   displayName: string;
   version: string;
-  publicKeyFingerprint: string;  // For TOFU verification
-  tags: string[];                // Profile tags summary
-  capabilities: string[];        // Supported features
+  publicKeyFingerprint: string; // For TOFU verification
+  tags: string[]; // Profile tags summary
+  capabilities: string[]; // Supported features
 }
 
 // ─── Room Management ────────────────────────────────────────────────
@@ -172,9 +172,9 @@ export interface RoomSummary {
   metadata: RoomMetadata;
 }
 
-// ─── Server Configuration ───────────────────────────────────────────
+// ─── Service Configuration ───────────────────────────────────────────
 
-export interface SignalingServerConfig {
+export interface SignalingServiceConfig {
   port: number;
   host: string;
   authToken?: string;
@@ -186,9 +186,9 @@ export interface SignalingServerConfig {
   turnServers: RTCIceServer[];
 }
 
-export const DEFAULT_CONFIG: SignalingServerConfig = {
+export const DEFAULT_SIGNALING_CONFIG: SignalingServiceConfig = {
   port: 3478,
-  host: "0.0.0.0",
+  host: "127.0.0.1",
   heartbeatIntervalMs: 30_000,
   heartbeatTimeoutMs: 90_000,
   roomTtlMs: 24 * 60 * 60 * 1000, // 24 hours
@@ -196,3 +196,15 @@ export const DEFAULT_CONFIG: SignalingServerConfig = {
   corsOrigins: ["*"],
   turnServers: [],
 };
+
+// ─── Service State ──────────────────────────────────────────────────
+
+export interface SignalingServiceState {
+  running: boolean;
+  port: number;
+  host: string;
+  uptime: number;
+  peerCount: number;
+  roomCount: number;
+  startedAt: number | null;
+}

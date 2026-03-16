@@ -17,11 +17,11 @@
     "allowSyntheticDefaultImports": true,
     "isolatedModules": true,
     "noUncheckedIndexedAccess": true,
-    "noEmit": true
+    "noEmit": true,
+    "allowImportingTsExtensions": true
   },
   "include": [
-    "src/**/*.ts",
-    "signaling-server/src/**/*.ts"
+    "src/**/*.ts"
   ],
   "exclude": ["node_modules", "dist"]
 }

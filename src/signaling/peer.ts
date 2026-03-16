@@ -1,17 +1,45 @@
-// ClawChat Signaling Server — Peer Management
+// ClawChat Signaling Service — Peer Management
 import type { WebSocket } from "ws";
 import type { PeerInfo, PeerMetadata } from "./types.ts";
 
 export class PeerManager {
   private peers = new Map<string, PeerInfo>();
   private socketToPeer = new Map<WebSocket, string>();
+  private heartbeatCheckInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private heartbeatIntervalMs: number,
     private heartbeatTimeoutMs: number,
-  ) {
+  ) {}
+
+  // ─── Lifecycle ──────────────────────────────────────────────────
+
+  start(): void {
+    if (this.heartbeatCheckInterval) {
+      return; // Already started
+    }
     // Periodic check for stale peers
-    setInterval(() => this.checkStalePeers(), this.heartbeatIntervalMs);
+    this.heartbeatCheckInterval = setInterval(
+      () => this.checkStalePeers(),
+      this.heartbeatIntervalMs,
+    );
+  }
+
+  stop(): void {
+    if (this.heartbeatCheckInterval) {
+      clearInterval(this.heartbeatCheckInterval);
+      this.heartbeatCheckInterval = null;
+    }
+    // Close all peer connections
+    for (const peer of this.peers.values()) {
+      try {
+        peer.socket.close(1001, "Service shutting down");
+      } catch {
+        // Ignore errors during shutdown
+      }
+    }
+    this.peers.clear();
+    this.socketToPeer.clear();
   }
 
   // ─── Peer Registration ──────────────────────────────────────────
@@ -24,9 +52,13 @@ export class PeerManager {
     const existingPeer = this.peers.get(peerId);
     const now = Date.now();
 
+    // Handle reconnection - replace existing connection
     if (existingPeer) {
-      // Replace existing connection (reconnect scenario)
-      existingPeer.socket.close(1000, "Replaced by new connection");
+      try {
+        existingPeer.socket.close(1000, "Replaced by new connection");
+      } catch {
+        // Socket may already be closed
+      }
       this.socketToPeer.delete(existingPeer.socket);
 
       existingPeer.socket = socket;
@@ -38,6 +70,7 @@ export class PeerManager {
       return { success: true, replaced: true };
     }
 
+    // Register new peer
     const peer: PeerInfo = {
       id: peerId,
       socket,
@@ -114,7 +147,11 @@ export class PeerManager {
     for (const peerId of stalePeers) {
       const peer = this.peers.get(peerId);
       if (peer) {
-        peer.socket.close(1001, "Heartbeat timeout");
+        try {
+          peer.socket.close(1001, "Heartbeat timeout");
+        } catch {
+          // Socket may already be closed
+        }
         this.socketToPeer.delete(peer.socket);
         this.peers.delete(peerId);
       }

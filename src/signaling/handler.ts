@@ -1,9 +1,9 @@
-// ClawChat Signaling Server — Signaling Protocol Handler
+// ClawChat Signaling Service — Signaling Protocol Handler
 import type { WebSocket, WebSocketServer } from "ws";
 import type {
   SignalingMessage,
   SignalingResponse,
-  SignalingServerConfig,
+  SignalingServiceConfig,
 } from "./types.ts";
 import { RoomManager } from "./room.ts";
 import { PeerManager } from "./peer.ts";
@@ -13,7 +13,8 @@ export class SignalingHandler {
     private wss: WebSocketServer,
     private roomManager: RoomManager,
     private peerManager: PeerManager,
-    private config: SignalingServerConfig,
+    private config: SignalingServiceConfig,
+    private log: (category: string, message: string) => void,
   ) {}
 
   // ─── Message Dispatch ───────────────────────────────────────────
@@ -62,7 +63,7 @@ export class SignalingHandler {
         this.handleICE(message);
         break;
       default:
-        this.sendError(socket, "UNKNOWN_MESSAGE_TYPE", `Unknown message type`);
+        this.sendError(socket, "UNKNOWN_MESSAGE_TYPE", "Unknown message type");
     }
   }
 
@@ -92,8 +93,9 @@ export class SignalingHandler {
       timestamp: Date.now(),
     });
 
-    console.log(
-      `[signaling] Peer ${msg.metadata.displayName} (${msg.peerId.slice(0, 8)}...) connected` +
+    this.log(
+      "signaling",
+      `Peer ${msg.metadata.displayName} (${msg.peerId.slice(0, 8)}...) connected` +
         (result.replaced ? " (replaced)" : ""),
     );
   }
@@ -147,7 +149,7 @@ export class SignalingHandler {
       inviteCode: invitation?.code ?? "",
     });
 
-    console.log(`[signaling] Room ${room.id} created by ${msg.peerId.slice(0, 8)}...`);
+    this.log("signaling", `Room ${room.id} created by ${msg.peerId.slice(0, 8)}...`);
   }
 
   private handleRoomJoin(
@@ -185,7 +187,7 @@ export class SignalingHandler {
       });
     }
 
-    console.log(`[signaling] Peer ${msg.peerId.slice(0, 8)}... joined room ${msg.roomId}`);
+    this.log("signaling", `Peer ${msg.peerId.slice(0, 8)}... joined room ${msg.roomId}`);
   }
 
   private handleRoomLeave(
@@ -265,15 +267,15 @@ export class SignalingHandler {
 
     // Auto-join the room
     const peer = this.peerManager.getPeer(msg.peerId);
-    if (peer) {
-      this.roomManager.addPeerToRoom(result.roomId!, peer);
+    if (peer && result.roomId) {
+      this.roomManager.addPeerToRoom(result.roomId, peer);
 
-      const otherPeers = this.roomManager.getOtherPeersInRoom(result.roomId!, msg.peerId);
+      const otherPeers = this.roomManager.getOtherPeersInRoom(result.roomId, msg.peerId);
       const peerMetadatas = otherPeers.map((p) => p.metadata);
 
       this.send(socket, {
         type: "invite:redeemed",
-        roomId: result.roomId!,
+        roomId: result.roomId,
         peers: peerMetadatas,
       });
 
@@ -281,7 +283,7 @@ export class SignalingHandler {
       for (const otherPeer of otherPeers) {
         this.send(otherPeer.socket, {
           type: "room:peer-joined",
-          roomId: result.roomId!,
+          roomId: result.roomId,
           peer: peer.metadata,
         });
       }
@@ -314,9 +316,9 @@ export class SignalingHandler {
 
   // ─── Disconnection ──────────────────────────────────────────────
 
-  private disconnectPeer(peerId: string): void {
+  disconnectPeer(peerId: string): void {
     const affectedRooms = this.roomManager.removePeerFromAllRooms(peerId);
-    this.peerManager.removePeer(peerId);
+    this.peerManager.unregisterPeer(peerId);
 
     // Notify remaining peers in affected rooms
     for (const roomId of affectedRooms) {
@@ -330,7 +332,7 @@ export class SignalingHandler {
       }
     }
 
-    console.log(`[signaling] Peer ${peerId.slice(0, 8)}... disconnected`);
+    this.log("signaling", `Peer ${peerId.slice(0, 8)}... disconnected`);
   }
 
   // ─── Send Helpers ───────────────────────────────────────────────
