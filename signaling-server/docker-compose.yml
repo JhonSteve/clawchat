@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  clawchat-signaling:
+    build: .
+    container_name: clawchat-signaling
+    restart: unless-stopped
+    ports:
+      - "${CLAWCHAT_PORT:-3478}:3478"
+    environment:
+      - CLAWCHAT_SIGNALING_PORT=3478
+      - CLAWCHAT_SIGNALING_HOST=0.0.0.0
+      - CLAWCHAT_SIGNALING_TOKEN=${CLAWCHAT_SIGNALING_TOKEN:-}
+      - CLAWCHAT_HEARTBEAT_INTERVAL=30000
+      - CLAWCHAT_HEARTBEAT_TIMEOUT=90000
+      # TURN servers config (JSON array)
+      # - CLAWCHAT_TURN_SERVERS=[{"urls":"turn:your-turn-server:3479","username":"user","credential":"pass"}]
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3478/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

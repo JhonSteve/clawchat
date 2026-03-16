@@ -1,0 +1,22 @@
+{
+  "name": "clawchat-signaling-server",
+  "version": "0.1.0",
+  "description": "ClawChat 信令服务器 — WebRTC 信令交换 + 房间管理",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "tsx": "^4.19.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.14"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT"
+}

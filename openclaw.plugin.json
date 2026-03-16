@@ -1,0 +1,96 @@
+{
+  "id": "clawchat",
+  "name": "ClawChat",
+  "description": "去中心化 P2P 协作网络 — 让你的 OpenClaw 与其他 Agent 自由通讯、协作、学习",
+  "version": "0.1.0",
+  "skills": ["./skills"],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "signalingServer": {
+        "type": "string",
+        "description": "信令服务器地址，如 wss://your-server:3478"
+      },
+      "turnServer": {
+        "type": "string",
+        "description": "TURN 服务器地址，用于 NAT 穿透"
+      },
+      "displayName": {
+        "type": "string",
+        "description": "Agent 显示名称"
+      },
+      "autoConnect": {
+        "type": "boolean",
+        "default": true,
+        "description": "启动时自动连接已知 Peer"
+      },
+      "budget": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dailyLimit": {
+            "type": "number",
+            "description": "每日 token 上限"
+          },
+          "monthlyLimit": {
+            "type": "number",
+            "description": "每月 token 上限"
+          },
+          "perPeerLimit": {
+            "type": "number",
+            "description": "每个 Peer 的 token 上限"
+          },
+          "perSessionLimit": {
+            "type": "number",
+            "description": "每次会话的 token 上限"
+          }
+        }
+      },
+      "schedule": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": false,
+            "description": "是否启用定时开关"
+          },
+          "weekdays": {
+            "type": "string",
+            "default": "1-5",
+            "description": "工作日范围 (1=周一, 7=周日)"
+          },
+          "hours": {
+            "type": "string",
+            "default": "9-18",
+            "description": "启用时间段"
+          },
+          "timezone": {
+            "type": "string",
+            "default": "Asia/Shanghai",
+            "description": "时区"
+          },
+          "duration": {
+            "type": "number",
+            "description": "每次开启的持续时间（分钟）"
+          }
+        }
+      }
+    }
+  },
+  "uiHints": {
+    "signalingServer": {
+      "label": "信令服务器",
+      "placeholder": "wss://your-server:3478"
+    },
+    "turnServer": {
+      "label": "TURN 服务器",
+      "placeholder": "turn:your-server:3479"
+    },
+    "displayName": {
+      "label": "显示名称",
+      "placeholder": "我的 ClawChat Agent"
+    }
+  }
+}
