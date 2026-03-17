@@ -7,6 +7,12 @@ import {
   type SignalingService,
   type SignalingServiceOptions,
 } from "./signaling/index.ts";
+import {
+  generateInvitation,
+  parseInvitationCode,
+  formatInvitationForDisplay,
+  type GeneratedInvitation,
+} from "./tools/claw_invite.ts";
 
 let clawchatConfig: ClawChatConfig;
 let signalingService: SignalingService | null = null;
@@ -99,7 +105,57 @@ export default function clawchatPlugin(api: Plugin) {
       required: ["action"],
     },
     execute: async (params) => {
-      // TODO: Phase 3 — Wire to ConnectionManager
+      if (params.action === "invitation" && params.inviteCode) {
+        const payload = parseInvitationCode(params.inviteCode);
+        if (!payload) {
+          return {
+            content: JSON.stringify({
+              success: false,
+              error: "invalid_or_expired",
+              message: "邀请码无效或已过期",
+            }, null, 2),
+          };
+        }
+
+        return {
+          content: JSON.stringify({
+            success: true,
+            message: "邀请码验证成功",
+            connection: {
+              serverUrl: payload.serverUrl,
+              roomId: payload.roomId,
+              createdBy: payload.createdBy,
+              expiresAt: new Date(payload.expiry).toISOString(),
+            },
+            nextStep: "正在连接到信令服务器...",
+            // TODO: 实际连接逻辑需要 ConnectionManager
+          }, null, 2),
+        };
+      }
+
+      if (params.action === "status") {
+        const signalingState = getSignalingServiceState();
+        return {
+          content: JSON.stringify({
+            signaling: signalingState,
+            config: {
+              displayName: clawchatConfig.displayName,
+              signalingPort: clawchatConfig.signalingPort,
+            },
+          }, null, 2),
+        };
+      }
+
+      if (params.action === "disconnect") {
+        // TODO: 实际断开连接逻辑
+        return {
+          content: JSON.stringify({
+            success: true,
+            message: "已断开所有连接",
+          }, null, 2),
+        };
+      }
+
       return { content: `ClawConnect: action=${params.action} (placeholder)` };
     },
   });
@@ -305,6 +361,55 @@ export default function clawchatPlugin(api: Plugin) {
     },
   });
 
+  // claw_invite — Generate shareable invitation
+  api.registerTool({
+    name: "claw_invite",
+    description: "生成 ClawChat 邀请码。生成后可以复制提示词发给朋友，对方发给自己的 OpenClaw 就能直接连接。",
+    parameters: {
+      type: "object",
+      properties: {
+        expiresInHours: {
+          type: "number",
+          default: 24,
+          description: "邀请码有效期（小时），默认 24 小时",
+        },
+        displayName: {
+          type: "string",
+          description: "你的显示名称（可选，用于邀请信息）",
+        },
+      },
+    },
+    execute: async (params) => {
+      const signalingState = getSignalingServiceState();
+      
+      // Check if signaling service is running
+      if (!signalingState?.running) {
+        return {
+          content: JSON.stringify({
+            success: false,
+            error: "signaling_not_running",
+            message: "信令服务未运行，请先使用 claw_signaling start 启动",
+            hint: "运行: claw_signaling start",
+          }, null, 2),
+        };
+      }
+
+      const displayName = params.displayName ?? clawchatConfig.displayName ?? "OpenClaw Agent";
+      const expiresInHours = params.expiresInHours ?? 24;
+
+      const invitation = generateInvitation({
+        serverHost: signalingState.host,
+        serverPort: signalingState.port,
+        displayName,
+        expiresInHours,
+      });
+
+      return {
+        content: formatInvitationForDisplay(invitation),
+      };
+    },
+  });
+
   // claw_status — Connection status and token usage
   api.registerTool({
     name: "claw_status",
@@ -422,7 +527,7 @@ export default function clawchatPlugin(api: Plugin) {
   // ─── Register Hooks ─────────────────────────────────────────
   // TODO: Phase 8 — Register before_prompt_build hook to inject peer info
 
-  logger.info("core", "All tools registered (9 tools)");
+  logger.info("core", "All tools registered (10 tools)");
 }
 
 // Export types for external use

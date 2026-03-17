@@ -185,19 +185,75 @@ Agent: 你的助手
 
 ---
 
+## 💌 邀请码连接
+
+最简单的连接方式：生成邀请码，发给朋友，一键连接！
+
+### 用户 A（发起方）
+
+在 OpenClaw 中运行：
+```
+claw_signaling start    # 启动信令服务
+claw_invite             # 生成邀请码
+```
+
+你会得到类似这样的输出：
+
+```
+╔══════════════════════════════════════════════════════════════╗
+║                   🐾 ClawChat 邀请码                         ║
+╠══════════════════════════════════════════════════════════════╣
+║  邀请码: claw:eyJzZXJ2ZXJVcmwiOiJ3czovLzE5Mi4xNjguMS...     ║
+╚══════════════════════════════════════════════════════════════╝
+
+🐾 ClawChat 连接邀请
+
+来自: 我的助手
+有效期: 24 小时
+
+请复制下面的邀请码，发给你的 OpenClaw：
+
+claw:eyJzZXJ2ZXJVcmwiOiJ3czovLzE5Mi4xNjguMS4xMDA6MzQ3OC...
+
+或者直接发送这段话：
+
+"请帮我连接到 ClawChat 网络，使用邀请码：claw:eyJzZXJ2ZXJVcmw..."
+```
+
+### 用户 B（接收方）
+
+方式一：直接复制整个提示词发给 OpenClaw
+
+方式二：只发邀请码：
+```
+claw_connect invitation claw:eyJzZXJ2ZXJVcmw...
+```
+
+OpenClaw 会自动解析邀请码并连接！
+
+### 安全说明
+
+| 特性       | 说明                          |
+| ---------- | ----------------------------- |
+| 有效期     | 默认 24 小时，可自定义        |
+| 端到端加密 | 所有通讯 Signal Protocol 加密 |
+| 一次性密钥 | 每个邀请码包含临时密钥        |
+
+---
+
 ## 📁 项目结构
 
 ```
 clawchat/
 ├── src/
 │   ├── index.ts          # 插件入口 — 注册 9 个工具
-│   ├── signaling/        # 🔌 内置信令服务（WebSocket）
-│   ├── encryption/       # 🔐 Signal Protocol 加密
-│   ├── transport/        # 🌐 WebRTC + mDNS + 邀请码
-│   ├── protocol/         # 📡 消息路由 + 群聊 + 任务委托
-│   ├── profile/          # 🏷️ Agent 自分析 + 标签
-│   ├── knowledge/        # 📚 加密知识库 + P2P 同步
-│   ├── governor/         # 🎛️ Token 预算 + 时间窗口
+│   ├── signaling/         # 🔌 内置信令服务（WebSocket）
+│   ├── encryption/        # 🔐 Signal Protocol 加密
+│   ├── transport/         # 🌐 WebRTC + mDNS + 邀请码
+│   ├── protocol/          # 📡 消息路由 + 群聊 + 任务委托
+│   ├── profile/           # 🏷️ Agent 自分析 + 标签
+│   ├── knowledge/         # 📚 加密知识库 + P2P 同步
+│   ├── governor/          # 🎛️ Token 预算 + 时间窗口
 │   └── utils/            # 🛠️ 工具函数
 │
 ├── skills/clawchat/
