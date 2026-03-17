@@ -96,7 +96,7 @@ export class Governor extends EventEmitter {
     return {
       budget: this.budgetTracker.getBudget(),
       usage: this.budgetTracker.getUsage(),
-      timeWindow: this.timeController["config"] as TimeWindowConfig,
+      timeWindow: this.timeController.getConfig(),
       timeWindowState: this.timeController.getState(),
       suspended: this.suspended,
       suspensionReason: this.suspensionReason,

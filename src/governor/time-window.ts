@@ -138,6 +138,10 @@ export class TimeWindowController extends EventEmitter {
     return { ...this.state };
   }
 
+  getConfig(): TimeWindowConfig {
+    return { ...this.config };
+  }
+
   isOpen(): boolean {
     return this.state.isOpen;
   }

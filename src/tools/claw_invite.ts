@@ -28,19 +28,40 @@ export interface GeneratedInvitation {
 
 // ─── Invitation Generator ────────────────────────────────────────
 
+/**
+ * Detect if the current environment should use secure WebSocket.
+ * Returns true if running behind HTTPS or if explicitly configured.
+ */
+function detectSecureMode(): boolean {
+  // Check environment variables for explicit configuration
+  if (process.env.CLAWCHAT_SECURE === "true") return true;
+  if (process.env.CLAWCHAT_SECURE === "false") return false;
+
+  // Auto-detect from common indicators
+  const isProduction = process.env.NODE_ENV === "production";
+  const hasHttpsUrl = process.env.URL?.startsWith("https://");
+  const hasSecureHeader = process.env.HTTPS === "on" || process.env.HTTPS === "1";
+  const hasForwardedProto = process.env.X_FORWARDED_PROTO === "https";
+
+  return isProduction || hasHttpsUrl || hasSecureHeader || hasForwardedProto;
+}
+
 export function generateInvitation(options: {
   serverHost: string;
   serverPort: number;
   displayName: string;
   expiresInHours?: number;
+  secure?: boolean;
 }): GeneratedInvitation {
   const {
     serverHost,
     serverPort,
     displayName,
     expiresInHours = 24,
+    secure = detectSecureMode(),
   } = options;
 
+  const protocol = secure ? "wss" : "ws";
   const roomId = `room_${randomBytes(8).toString("hex")}`;
   const tempKey = randomBytes(32).toString("hex");
   const createdAt = Date.now();
@@ -48,7 +69,7 @@ export function generateInvitation(options: {
 
   const payload: InvitationPayload = {
     version: 1,
-    serverUrl: `ws://${serverHost}:${serverPort}/ws`,
+    serverUrl: `${protocol}://${serverHost}:${serverPort}/ws`,
     serverHost,
     serverPort,
     roomId,

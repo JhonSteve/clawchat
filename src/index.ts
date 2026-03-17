@@ -72,7 +72,9 @@ export default function clawchatPlugin(api: Plugin) {
 
   // ─── Auto-start Signaling Service (if configured) ───────────
   if (clawchatConfig.signalingServer === "embedded" || clawchatConfig.signalingPort) {
-    startEmbeddedSignalingService();
+    startEmbeddedSignalingService().catch((err) => {
+      logger.error("core", `Failed to start signaling service: ${err}`);
+    });
   }
 
   // ─── Register Tools ─────────────────────────────────────────
@@ -105,6 +107,17 @@ export default function clawchatPlugin(api: Plugin) {
       required: ["action"],
     },
     execute: async (params) => {
+      if (params.action === "signaling" && params.serverUrl) {
+        // TODO: Connect to external signaling server
+        return {
+          content: JSON.stringify({
+            success: false,
+            message: "连接外部信令服务器功能尚未实现，请使用内置信令服务",
+            hint: "使用 claw_signaling start 启动内置服务",
+          }, null, 2),
+        };
+      }
+
       if (params.action === "invitation" && params.inviteCode) {
         const payload = parseInvitationCode(params.inviteCode);
         if (!payload) {
@@ -355,7 +368,8 @@ export default function clawchatPlugin(api: Plugin) {
     },
     execute: async (params) => {
       if (params.action === "get") {
-        return { content: JSON.stringify(clawchatConfig, null, 2) };
+        const { signalingToken, ...safeConfig } = clawchatConfig;
+        return { content: JSON.stringify(safeConfig, null, 2) };
       }
       return { content: `ClawConfig: action=${params.action} (placeholder)` };
     },
